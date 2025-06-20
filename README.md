@@ -1,107 +1,86 @@
 # CSRF Vulnerability Scanner and Proof of Concept
 
-## Project Overview
+## 📜 Project Overview
 
-This project addresses the requirements of a cybersecurity assignment focused on Cross-Site Request Forgery (CSRF). It includes three main components:
-1.  **Research:** A summary of CSRF middleware and protection mechanisms.
-2.  **CSRF Scanner:** A Python-based crawler (`csrf_scanner.py`) that scans web applications for forms lacking CSRF token protection.
-3.  **Proof of Concept (PoC):** An HTML page (`poc.html`) that demonstrates a successful CSRF attack against a sample vulnerable application.
+This project is designed to research and identify Cross-Site Request Forgery (CSRF) vulnerabilities in web applications. It includes a Python-based crawler to detect missing CSRF protections and an HTML-based Proof of Concept (PoC) to demonstrate the vulnerability.
 
 ---
 
-## 1. Research: CSRF Middleware and Protections
+## 📌 Part 1: Research on CSRF Middleware and Protections
 
-Cross-Site Request Forgery (CSRF) is an attack that tricks a user into submitting a malicious request. It leverages the user's existing session/authentication with a web application to perform unauthorized actions (e.g., changing an email, transferring funds, deleting an account).
+### What is CSRF?
 
-### How CSRF Protections Work
+Cross-Site Request Forgery (CSRF) is an attack that tricks a user into submitting a malicious request. It inherits the identity and privileges of the victim to perform an undesired function on their behalf. For most sites, browser requests automatically include any credentials associated with the site, such as session cookies, IP addresses, and domain credentials. Therefore, if the user is authenticated to the site, the site cannot distinguish between a forged request and a legitimate one.
 
-Modern web frameworks use CSRF middleware to protect against these attacks. The most common method is the **Synchronizer (CSRF) Token Pattern**.
+### How CSRF Protection Works
 
-1.  **Token Generation:** When a user requests a page with a form, the server generates a unique, unpredictable token.
-2.  **Token Embedding:** This token is embedded as a hidden input field in the form.
-3.  **Token Validation:** When the user submits the form, the server-side middleware checks if the submitted token matches the one stored in the user's session.
-    *   **If tokens match:** The request is considered legitimate and is processed.
-    *   **If tokens do not match (or the token is missing):** The request is rejected as potentially malicious.
+Modern web frameworks provide middleware to protect against CSRF attacks. The most common mitigation is the **Synchronizer Token Pattern**.
 
-This works because an attacker, hosting the malicious form on a different domain, cannot guess or access the correct token required by the application.
-
-Other protections include:
-*   **SameSite Cookies:** This attribute tells the browser whether to send cookies with cross-site requests. Setting it to `Strict` or `Lax` provides strong protection against CSRF.
-*   **Checking the Referer/Origin Header:** The server can check if the request originated from its own domain, but this is less reliable as headers can sometimes be spoofed or stripped.
+1.  **Token Generation**: When a user requests a page with a form, the server generates a unique, random token (the CSRF token).
+2.  **Token Embedding**: This token is embedded within a hidden input field in the form.
+3.  **Token Validation**: When the user submits the form, the token is sent back to the server. The server-side middleware then compares this token with the one it generated. If they match, the request is considered legitimate. If the token is missing or incorrect, the request is rejected.
 
 ---
 
-## 2. The CSRF Vulnerability Scanner
+## 🐍 Part 2: CSRF Crawler
 
-The `csrf_scanner.py` script is a crawler designed to identify forms that are potentially vulnerable to CSRF attacks by checking for the absence of CSRF tokens.
+This project includes a Python crawler designed to scan web applications for potential CSRF vulnerabilities.
 
 ### How it Works
 
-1.  **Initialization:** The scanner takes a starting URL as input.
-2.  **Crawling:** It uses `requests` to fetch the page content and `BeautifulSoup` to parse the HTML. It identifies all internal links on the page to scan them recursively.
-3.  **Form Analysis:** For each page, it finds all `<form>` elements.
-4.  **Token Check:** Within each form, it looks for an `<input>` field with common CSRF token names (e.g., `csrf_token`, `csrfmiddlewaretoken`, `_token`).
-5.  **Reporting:** If a form is found without a recognizable CSRF token, it is flagged as potentially vulnerable and its URL and action attribute are printed to the console.
+The crawler (`crawler.py`) automatically discovers and analyzes forms within a web application. It checks each form for the presence of a CSRF token.
 
-### Usage
+1.  **Crawling**: The script starts at a given URL and recursively follows all links on the same domain.
+2.  **Form Detection**: For each page, it parses the HTML to find all `<form>` elements.
+3.  **Token Verification**: It then checks if each form contains an `input` field with a name commonly used for CSRF tokens (e.g., `csrf_token`, `_csrf`, `authenticity_token`).
+4.  **Reporting**: The crawler prints a report of all forms found and indicates whether they have a CSRF token.
 
-1.  Install the required libraries:
+### How to Use the Crawler
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/AkhilAGilgal/cyber1.git
+    cd cyber1
+    ```
+2.  **Install dependencies:**
     ```bash
     pip install requests beautifulsoup4
     ```
-2.  Run the scanner from the command line:
+3.  **Run the script:**
     ```bash
-    python csrf_scanner.py <your-target-url>
+    python crawler.py <URL_TO_SCAN>
     ```
-    *Example:*
-    ```bash
-    python csrf_scanner.py http://127.0.0.1:5000
-    ```
+    Replace `<URL_TO_SCAN>` with the URL of the web application you want to test.
 
-### Scanner in Action (Screenshot)
-
-*(You will add your screenshot here)*
-
-![Scanner Output](images/scanner_output.png)
+*(Optional: Insert a screenshot of the crawler in action here. See instructions below on how to add images.)*
 
 ---
 
-## 3. Proof of Concept (PoC) Attack
+## 💥 Part 3: HTML Proof of Concept (PoC)
 
-To demonstrate the impact of a missing CSRF token, we created a sample vulnerable application and an HTML PoC to exploit it.
+To demonstrate a successful CSRF attack, an HTML Proof of Concept (`poc.html`) is provided.
 
-### The Vulnerable Application
+### How the PoC Works
 
-A simple Flask application (`vulnerable_app.py`) was created with a form to change a user's email. **This form intentionally lacks a CSRF token.**
+The `poc.html` page contains a hidden form that mimics a legitimate form from the target application (e.g., a "change password" or "add to cart" form).
 
-*   **Vulnerable Endpoint:** `POST /change-email`
-*   **Action:** Changes the user's email to the one provided in the `email` parameter.
-*   **Vulnerability:** It does not validate any CSRF token, so it will process any valid POST request from any source as long as the user is logged in.
+1.  **Malicious Page**: An attacker hosts this HTML page on a different server and tricks a logged-in user into visiting it.
+2.  **Automatic Submission**: The page uses JavaScript to automatically submit the hidden form to the target application's endpoint.
+3.  **Unauthorized Action**: Since the user is logged in, their browser automatically includes their session cookie with the request. The vulnerable application processes the request as if the user had made it themselves, leading to an unauthorized action.
 
-![Vulnerable App Code](images/vulnerable_app_code.png)
+*(Optional: Insert a screenshot of the PoC page or the result of the successful attack here.)*
 
-### The Attack Scenario
+---
 
-1.  A victim is logged into the vulnerable application (`http://127.0.0.1:5000`).
-2.  The victim visits a malicious website controlled by an attacker.
-3.  This malicious website contains our `poc.html` page.
-4.  The `poc.html` page contains a hidden form that targets the vulnerable `/change-email` endpoint. The form is pre-filled with the attacker's email address.
-5.  JavaScript on the page automatically submits this form as soon as the page loads.
-6.  Because the victim is logged in, their browser automatically attaches their session cookie to the request. The vulnerable server sees a valid session and processes the request, changing the victim's email to the attacker's email without the victim's knowledge.
+## 🖼️ Supporting Images
 
-### The PoC HTML (`poc.html`)
+Below are images that support the explanations above.
 
-This HTML page performs the attack. It tells the user it's a "fun cat website" to trick them, while the hidden form submits in the background.
+**Image 1: Example of a form with a CSRF token.**
+*(You will insert your image here)*
 
-![PoC Code](images/poc_code.png)
+**Image 2: The crawler identifying a vulnerable form.**
+*(You will insert your image here)*
 
-### Demonstration of the Attack
-
-1.  The user is logged in and their email is `user@example.com`.
-![Vulnerable App Before Attack](images/app_before_attack.png)
-
-2.  The user visits the attacker's `poc.html` page. The page auto-submits.
-![PoC Page](images/poc_page.png)
-
-3.  The user's email on the vulnerable application is now changed to `attacker@malicious.com`. The attack was successful.
-![Vulnerable App After Attack](images/app_after_attack.png)
+**Image 3: The result of the successful PoC attack.**
+*(You will insert your image here)*
